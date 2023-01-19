@@ -2,6 +2,7 @@
 
 namespace Okta\Utilities;
 
+use GuzzleHttp\Client;
 use Lcobucci\JWT\Signer;
 use Okta\Exceptions\Error;
 use Lcobucci\JWT\Signer\Key;
@@ -105,7 +106,7 @@ class PrivateKeyAuthentication {
 
     private function tokenRequest($clientAssertion)
     {
-        $curl = curl_init();
+        //$curl = curl_init();
         $ca = "";
         if(\method_exists($clientAssertion, "toString")) {
             $ca = $clientAssertion->toString();
@@ -113,30 +114,48 @@ class PrivateKeyAuthentication {
             $ca = (string)$clientAssertion;
         }
 
-        $query = http_build_query([
-            'grant_type' => 'client_credentials',
-            'scope' => $this->scopes,
-            'client_assertion_type' => 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
-            'client_assertion' => $ca
-        ]);
-        curl_setopt($curl,CURLOPT_URL, $this->orgUrl . '/oauth2/v1/token?'.$query);
-        curl_setopt($curl,CURLOPT_POST, true);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, [
-            'Accept: application/json',
-            'Content-Type: application/x-www-form-urlencoded'
-        ]);
-        curl_setopt($curl,CURLOPT_RETURNTRANSFER, true);
+        //$query = http_build_query([
+        //    'grant_type' => 'client_credentials',
+        //    'scope' => $this->scopes,
+        //    'client_assertion_type' => 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+        //    'client_assertion' => $ca
+        //]);
+        //curl_setopt($curl,CURLOPT_URL, $this->orgUrl . '/oauth2/v1/token?'.$query);
+        //curl_setopt($curl,CURLOPT_POST, true);
+        //curl_setopt($curl, CURLOPT_HTTPHEADER, [
+        //    'Accept: application/json',
+        //    'Content-Type: application/x-www-form-urlencoded'
+        //]);
+        //curl_setopt($curl,CURLOPT_RETURNTRANSFER, true);
+        //
+        //$token = json_decode(curl_exec($curl));
+        //$info = curl_getinfo($curl);
+        //$httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        //curl_close($curl);
+        //if ($httpcode < 200 || $httpcode > 299) {
+        //    $error = new Error($token);
+        //    throw new ResourceException($error);
+        //}
 
-        $token = json_decode(curl_exec($curl));
-        $info = curl_getinfo($curl);
-        $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        curl_close($curl);
-        if ($httpcode < 200 || $httpcode > 299) {
-            $error = new Error($token);
-            throw new ResourceException($error);
+        $client = new Client();
+        $response = $client->request('POST', $this->orgUrl. '/oauth2/v1/token', [
+            'form_params' => [
+                'grant_type' => 'client_credentials',
+                'scope' => $this->scopes,
+                'client_assertion_type' => 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+                'client_assertion' => $ca
+            ],
+            'headers' => [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/x-www-form-urlencoded',
+            ],
+        ]);
+        if ($response->getStatusCode() !== 200) {
+            throw new \RuntimeException('PrivateKeyAuthenticator; JWT request failure.');
         }
 
-        return $token->access_token;
+        $result = json_decode((string)$response->getBody());
 
+        return $result['access_token'];
     }
 }
