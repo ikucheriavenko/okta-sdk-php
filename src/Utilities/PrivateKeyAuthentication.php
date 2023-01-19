@@ -154,7 +154,7 @@ class PrivateKeyAuthentication {
             throw new \RuntimeException('PrivateKeyAuthenticator; JWT request failure.');
         }
 
-        $result = json_decode((string)$response->getBody());
+        $result = json_decode((string)$response->getBody(), true);
 
         return $result['access_token'];
     }
