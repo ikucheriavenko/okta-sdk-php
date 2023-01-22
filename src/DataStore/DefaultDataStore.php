@@ -18,6 +18,7 @@
 namespace Okta\DataStore;
 
 use Cache\Adapter\Common\CacheItem;
+use Psr\Http\Message\ResponseInterface;
 use function GuzzleHttp\Psr7\build_query;
 use function GuzzleHttp\Psr7\parse_query;
 use Http\Client\Common\Plugin\AuthenticationPlugin;
@@ -80,6 +81,8 @@ class DefaultDataStore
      * @var AbstractResource A place to temporally store the resource we are working with.
      */
     private $resource;
+
+    private $lastResponse;
 
     /**
      * DefaultDataStore constructor.
@@ -292,6 +295,7 @@ class DefaultDataStore
         $request = $this->messageFactory->createRequest($method, $uri, $headers, $body);
 
         $response = $this->httpClient->sendRequest($request);
+        $this->lastResponse = $response;
 
         $result = $response->getBody() ? json_decode($response->getBody()) : null;
 
@@ -326,6 +330,11 @@ class DefaultDataStore
             }
         }
         return $result;
+    }
+
+    public function getLastResponse(): ResponseInterface
+    {
+        return $this->lastResponse;
     }
 
     /**
